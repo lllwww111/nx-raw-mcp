@@ -13,7 +13,7 @@ result = workPart == null
         + "\nUnits: " + workPart.PartUnits.ToString();
 ```
 
-raw 会话可能最初为空，也与另一个已打开的 NX 窗口相互独立。
+连接的是加载 DLL 的 NX 窗口，读取它当前的工作零件；这个窗口也可能没有打开零件。
 
 ## 打开已有零件或总装
 

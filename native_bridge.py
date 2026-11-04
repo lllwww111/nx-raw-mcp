@@ -9,6 +9,8 @@ mcp = FastMCP('raw-nx-csharp')
 def nx_exec_csharp(code: str) -> dict:
     """Execute C# statements in NX; no using/class/Main.
     Variables: session, ufSession, workPart, displayPart, result.
+    Use C# reflection to inspect types, methods and parameters in the loaded
+    NXOpen / NXOpen.UF DLLs; no separate DLL lookup tool is required.
     Locals do not persist between calls; native model changes do.
     This endpoint does NOT update, check features, create undo marks, undo,
     save, register objects, or inject state. Exceptions can leave partial changes.

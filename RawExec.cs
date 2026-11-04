@@ -4,43 +4,131 @@ using System.Net;
 using System.Text;
 using System.Web.Script.Serialization;
 using System.Collections.Generic;
+using System.Threading;
+using System.Windows.Forms;
 using NXOpen;
 
-// Standalone experimental transport. No reference to CADOperator assemblies.
+// Load this library in an interactive NX session. No CAD tool router is used.
 public class RawExec
 {
-    public static void Main(string[] args)
+    private static GuiHost host;
+
+    public static void Main()
     {
-        int port = int.Parse(args[0]);
-        if (port < 20700 || port > 20799) throw new ArgumentException("Dedicated experiment ports only");
-        Session session = Session.GetSession();
-        var json = new JavaScriptSerializer { MaxJsonLength = 2000000 };
-        var listener = new HttpListener();
-        listener.Prefixes.Add("http://127.0.0.1:" + port + "/");
-        listener.Start();
-        Console.WriteLine("RAW_EXEC_READY " + port);
-        // All requests execute serially on this NX entry thread.
-        while (true)
+        // NX owns the entry-point arguments; they are not an HTTP port.
+        const int port = 20790;
+        if (host != null)
         {
-            var context = listener.GetContext();
-            object response;
-            try
+            ShowMessage("Already listening on " + host.Endpoint);
+            return;
+        }
+        Session session = Session.GetSession();
+        var candidate = new GuiHost(session, port);
+        try { candidate.Start(); }
+        catch { candidate.Stop(); throw; }
+        host = candidate;
+        ShowMessage("Listening on " + host.Endpoint);
+        // Return to NX immediately; the listener must not occupy the UI thread.
+    }
+
+    public static int GetUnloadOption(string arg)
+    {
+        return (int)Session.LibraryUnloadOption.Explicitly;
+    }
+
+    public static void UnloadLibrary(string arg)
+    {
+        if (host == null) return;
+        host.Stop();
+        host = null;
+    }
+
+    private static void ShowMessage(string message)
+    {
+        var window = Session.GetSession().ListingWindow;
+        window.Open();
+        window.WriteLine("NX Raw MCP: " + message);
+    }
+
+    private sealed class GuiHost
+    {
+        private readonly Session session;
+        private readonly Control dispatcher;
+        private readonly HttpListener listener;
+        private volatile bool running;
+        public readonly string Endpoint;
+
+        // Constructed by NX on its UI thread, just like the existing GUI dispatcher.
+        public GuiHost(Session currentSession, int port)
+        {
+            session = currentSession;
+            dispatcher = new Control();
+            var handle = dispatcher.Handle;
+            Endpoint = "http://127.0.0.1:" + port + "/";
+            listener = new HttpListener();
+            listener.Prefixes.Add(Endpoint);
+        }
+
+        public void Start()
+        {
+            listener.Start(); // A busy port is an error, not a reason to switch ports.
+            running = true;
+            var thread = new Thread(Listen);
+            thread.IsBackground = true;
+            thread.Name = "NX Raw MCP listener";
+            thread.Start();
+        }
+
+        public void Stop()
+        {
+            running = false;
+            listener.Close();
+            dispatcher.Dispose();
+            // Do not join here: the listener may be waiting for this UI thread.
+        }
+
+        private void Listen()
+        {
+            var json = new JavaScriptSerializer { MaxJsonLength = 2000000 };
+            while (running)
             {
-                if (context.Request.HttpMethod != "POST") throw new ArgumentException("POST required");
-                string body;
-                using (var reader = new StreamReader(context.Request.InputStream)) body = reader.ReadToEnd();
-                var request = json.Deserialize<Dictionary<string, object>>(body);
-                if (request.Count != 1 || !request.ContainsKey("code")) throw new ArgumentException("Only code is accepted");
-                string code = request["code"] as string;
-                if (string.IsNullOrWhiteSpace(code) || code.Length > 100000) throw new ArgumentException("code length must be 1..100000");
-                response = Execute(session, code);
+                HttpListenerContext context;
+                try { context = listener.GetContext(); }
+                catch (HttpListenerException) { break; }
+                catch (ObjectDisposedException) { break; }
+                try
+                {
+                    object response;
+                    try
+                    {
+                        if (context.Request.HttpMethod != "POST") throw new ArgumentException("POST required");
+                        string body;
+                        using (var reader = new StreamReader(context.Request.InputStream)) body = reader.ReadToEnd();
+                        var request = json.Deserialize<Dictionary<string, object>>(body);
+                        if (request == null || request.Count != 1 || !request.ContainsKey("code"))
+                            throw new ArgumentException("Only code is accepted");
+                        string code = request["code"] as string;
+                        if (string.IsNullOrWhiteSpace(code) || code.Length > 100000)
+                            throw new ArgumentException("code length must be 1..100000");
+                        // Receive HTTP off-thread; execute all NX API calls on the UI thread.
+                        response = dispatcher.Invoke(new Func<object>(delegate
+                        {
+                            if (!running) throw new InvalidOperationException("NX Raw MCP has stopped.");
+                            return Execute(session, code);
+                        }));
+                    }
+                    catch (Exception ex) { response = new { status = "error", error = ex.ToString() }; }
+                    byte[] bytes = Encoding.UTF8.GetBytes(json.Serialize(response));
+                    context.Response.ContentType = "application/json; charset=utf-8";
+                    context.Response.ContentLength64 = bytes.Length;
+                    context.Response.OutputStream.Write(bytes, 0, bytes.Length);
+                }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
+                finally
+                {
+                    try { context.Response.Close(); } catch { }
+                }
             }
-            catch (Exception ex) { response = new { status = "error", error = ex.ToString() }; }
-            byte[] bytes = Encoding.UTF8.GetBytes(json.Serialize(response));
-            context.Response.ContentType = "application/json; charset=utf-8";
-            context.Response.ContentLength64 = bytes.Length;
-            context.Response.OutputStream.Write(bytes, 0, bytes.Length);
-            context.Response.Close();
         }
     }
 

@@ -1,40 +1,22 @@
-# Source and archive scope
+# MVP scope
 
-Prepared on 2026-11-04 from the existing standalone raw executor.
+Updated on 2026-11-04.
 
-## Existing implementation
+- `RawExec.cs`: DLL loaded in an interactive NX session. HTTP reception runs on a background thread; NX journal execution is dispatched through a hidden WinForms control onto the NX UI thread, using the existing GUI implementation's scheduling pattern. The raw journal execution body is retained from the original standalone executor, without automatic update, rollback or saving.
+- `native_bridge.py`: one stdio MCP tool forwarding C# statements to local HTTP. Its description mentions reflection; no separate DLL lookup tool is registered.
+- `build.ps1`: compile against an explicit `-NxRoot`, producing `build/NxRawMcp.dll`. No NX environment variable or runtime setting is changed. Optional `-OutputName` permits a fresh assembly name when avoiding a cached development build.
+- `mcp.example.json`, dependencies and README files: basic client setup.
+- `docs/`: five user-provided screenshots for adding a manual startup button and unloading the plugin. Screenshot paths are examples.
+- `examples/` and `skills/nx-raw/`: optional C# examples and references, not server-side tools.
 
-- `RawExec.cs`: same C# execution source as the original `raw_exec_20260916/RawExec.cs`; line endings may differ.
-- `native_bridge.py`: same MCP forwarding source as the original `raw_exec_20260916/native_bridge.py`; line endings may differ.
+No headless launcher, automatic-startup installer, bundled Agent or model-provider integration is included. Research runners/results, CAD models, credentials, proprietary NX DLLs/manuals and compiled binaries are excluded. The MIT license covers the shared project code, not separately installed Siemens software.
 
-The executor creates a dedicated NX session with a serialized local HTTP listener and runs C# statement bodies through the native journal manager. The archive keeps its original port restriction and synchronous execution behavior.
+## Observed checks
 
-## Packaging material
+- Compiled x64 DLL against local NX 2406 assemblies with the .NET Framework compiler and `UGII_BASE_DIR` unset.
+- The user loaded the revised DLL in an existing NX 2406 window. A development name (`NxRawMcp_v2.dll`) avoided the cached earlier assembly.
+- A standalone MCP client discovered only `nx_exec_csharp`, created a separate 20 × 10 × 12.5 mm block, queried its bounding box, observed one body, six faces and no reported feature errors, and saved a non-empty native part.
+- The same tool returned metadata for the installed NXOpen assembly, `CreateBlockFeatureBuilder` and `SetOriginAndLengths`, including parameter types and names.
+- Earlier packaging checks compiled all 18 example/reference C# bodies against the local SDK and validated the optional skill structure.
 
-- `build.ps1`: retains the existing compiler and NX assembly references; replaces the local installation path with `-NxRoot` / `UGII_BASE_DIR` and puts output in `build/`.
-- `start.ps1`: documents and wraps the existing `run_dotnet_nxopen.exe RawExec.exe <port>` launch command. It does not manage process ownership, attach to GUI NX, or introduce a worker service.
-- `requirements.txt`: records the two direct Python package versions found in the existing environment during packaging, not a fresh-install certification or full lockfile.
-- `mcp.example.json`: placeholder client configuration with no provider credentials.
-- `examples/`: short C# call bodies, including native DLL reflection. The examples do not add MCP tools.
-- `skills/nx-raw/`: optional, self-contained Agent guidance plus common-call and DLL-inspection references. Nothing is installed automatically and no additional server tools are registered.
-- README files, `.gitignore` and the MIT `LICENSE`.
-
-## Excluded
-
-Research runners and results, model-provider integrations, hidden evaluators, dedicated modeling/assembly/fixture tools, commercial CAD models, local configuration, secrets, NX binaries, NX API documentation, compiled executables, Docker/Agent infrastructure and previous repository history.
-
-Only the source files explicitly included in this directory are intended for sharing. The license applies to this project's code; it does not grant rights to Siemens software or any separately installed dependency.
-
-No NX process or model-provider request was started for packaging. Any local static validation or compilation does not establish a new runtime-compatibility claim.
-
-## Packaging checks on 2026-11-04
-
-- Both core source files match the original bytes exactly.
-- The executor builds against the locally installed NX 2406 managed assemblies with the .NET Framework compiler.
-- All 18 C# example bodies across the example files and skill references compile against those assemblies. Compilation does not run their NX calls.
-- PowerShell scripts parse, Python syntax and example JSON parse, and local Markdown links resolve.
-- MCP stdio discovery returns only `nx_exec_csharp`. Forwarding of multiline Unicode code and success/error JSON was checked using a temporary fake local HTTP receiver, not NX.
-- The optional skill passes its frontmatter/structure validator.
-- A source-only file inventory was scanned for private machine paths, provider-key patterns and private-key blocks. No such matches were found; this is a targeted check, not a claim of universal security certification.
-
-No new CAD experiment, provider request or real-NX acceptance was performed.
+These bounded demonstrations do not certify every API, NX version, unload/reload sequence or error path. No model-provider request or benchmark rerun was used for these checks.

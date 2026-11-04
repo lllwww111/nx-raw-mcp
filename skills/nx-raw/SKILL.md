@@ -9,7 +9,7 @@ Use the client's `nx_exec_csharp` tool (possibly prefixed by its MCP server name
 
 The journal already provides `session`, `ufSession`, `workPart`, `displayPart`, and `result`. Do not send a complete program with `using`, class declarations or `Main`. Use qualified names for additional namespaces. There is no object-ID registry and no automatic state injection.
 
-Each request runs in the same dedicated NX session. C# locals disappear after a call; NX model changes remain. Re-query objects in later calls. If code changes the work part, read `session.Parts.Work` again within that call.
+Each request runs in the NX window where the DLL was loaded, using its current work part. C# locals disappear after a call; NX model changes remain. Re-query objects in later calls. If code changes the work part, read `session.Parts.Work` again within that call.
 
 ## References to read as needed
 
