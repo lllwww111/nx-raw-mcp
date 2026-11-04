@@ -4,6 +4,18 @@
 
 A minimal MCP bridge for executing NXOpen C# statements in your open Siemens NX window. One execution tool also supports inspecting NXOpen DLL types, methods and parameters through reflection. Shared as-is, without an ongoing development commitment.
 
+## Why a code execution interface
+
+Our internal testing suggests that, at least with models at the **DeepSeek V4.1 Flash** capability level, an Agent can look up NXOpen APIs, write code and perform well on the tasks we tried without a catalog of predefined modeling tools. This observation informs our design; it is not a guarantee for every model or CAD task.
+
+Initial API exploration typically costs more tokens. Within the same conversation, however, previously used APIs and commands can be reused while they remain in context, reducing repeated lookups. We also observed that too many predefined tools can sometimes misdirect an Agent or constrain how it combines native APIs.
+
+Developing and maintaining NX-specific tools is expensive. Instead of continually expanding a fixed tool catalog, we prefer to explore experience-driven self-improvement: let the Agent investigate, then capture validated commands and working procedures as documents or skills that can be read on demand. This repository provides such references, not a background system that automatically generates or updates skills.
+
+A related perspective is Zach Dive's Adam blog post, [The Bitter Lesson of AI CAD](https://adam.new/blog/bitter-lesson-ai-cad) (May 24, 2026). It describes moving away from specialized CAD abstractions toward code generation and visual feedback as general models improve.
+
+For a programmable interface such as NXOpen, many CAD operations can already be expressed as code. We therefore choose to reuse a general coding Agent and keep the connection layer simple, rather than build an elaborate CAD-specific Agent or tool system.
+
 ## 1. Build
 
 You need Windows x64, your own NX installation with NXOpen .NET, Python and a stdio MCP client. The current build and GUI demonstration used NX 2406 and Python 3.12. Other NX versions are not verified; this script targets .NET Framework, not the newer .NET 8 runtime.
