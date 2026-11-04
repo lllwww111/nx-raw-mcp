@@ -1,0 +1,35 @@
+# Local environments and configuration
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+mcp.json
+*.local.json
+.vscode/
+.idea/
+
+# Build products and Python caches
+build/
+bin/
+obj/
+__pycache__/
+*.py[cod]
+*.dll
+*.exe
+*.pdb
+
+# User models and local output
+*.prt
+*.prt.*
+*.step
+*.stp
+*.stl
+*.jt
+*.log
+logs/
+output/
+outputs/
+tmp/
+.DS_Store
+Thumbs.db

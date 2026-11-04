@@ -1,0 +1,4 @@
+# Direct dependencies observed in the existing local environment.
+# This is not a complete transitive dependency lock.
+fastmcp==3.1.0
+requests==2.34.2

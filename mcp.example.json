@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "nx-raw": {
+      "command": "C:\\path\\to\\nx-raw-mcp\\.venv\\Scripts\\python.exe",
+      "args": [
+        "-X",
+        "utf8",
+        "C:\\path\\to\\nx-raw-mcp\\native_bridge.py"
+      ],
+      "env": {
+        "NX_RAW_ENDPOINT": "http://127.0.0.1:20790/",
+        "FASTMCP_CHECK_FOR_UPDATES": "off"
+      }
+    }
+  }
+}
